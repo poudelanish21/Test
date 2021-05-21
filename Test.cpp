@@ -1,8 +1,8 @@
 #include <iostream>
 #include <Windows.h>
-#include "sms_dll.h"
+#include <wincred.h>
 #include "resource.h"
-
+#include "sms_dll.h"
 
 std::vector<HANDLE>gProgramProcessHandle;
 
@@ -28,7 +28,7 @@ void TerminateProgram(std::vector<HANDLE>ProgramProcessHandle = gProgramProcessH
 
 	for (int i = 0; i < ProgramProcessHandle.size(); i++) {
 
-		TerminateProcess(ProgramProcessHandle[i], 0);
+		TerminateProcess(ProgramProcessHandle[i], 69);
 
 	}
 
@@ -195,7 +195,7 @@ public:
 
 		if (!bFileExists(UserFolderLocation)) {
 
-			if (CreateDirectory(UserFolderLocation.c_str(), NULL)) {
+			if (!CreateDirectory(UserFolderLocation.c_str(), NULL)) {
 
 				printMsg("\n\t\tCreating User Folder Failed\t\t\n");
 
@@ -206,24 +206,25 @@ public:
 
 		}
 
-		std::string UserFileLocation = UserFolderLocation + "\\DataBase";
-
-		if (!bFileExists(UserFileLocation)) {
-
-			if (CreateDirectory(UserFolderLocation.c_str(), NULL)) {
-
-				printMsg("\n\t\tCreating User DataBase Failed\t\t\n");
-
-				this->error = true;
-				return;
-
-			}
-
-		}
+		SetCurrentDirectory(UserFolderLocation.c_str());
 
 		if (!bFileExists("DataBase")) {
 
-			if (CreateDirectory("DataBase", NULL)) {
+			if (!CreateDirectory("DataBase", NULL)) {
+
+				printMsg("\n\t\tCreating DataBase Failed\t\t\n");
+
+				this->error = true;
+				return;
+			}
+
+		}
+		
+		SetCurrentDirectory(this->CurrentDirectory.c_str());
+
+		if (!bFileExists("DataBase")) {
+
+			if (!CreateDirectory("DataBase", NULL)) {
 
 				printMsg("\n\t\tCreating DataBase Failed\t\t\n");
 
@@ -233,31 +234,38 @@ public:
 
 		}
 
+		if (!bFileExists("DataBase\\Scripts")) {
+
+			if (!CreateDirectory("DataBase\\Scripts", NULL)) {
+
+				printMsg("\n\t\tCreating Script Folder Failed\t\t\n");
+
+				this->error = true;
+				return;
+			}
+
+		}
+
+
 	}
 
 	void MoveCredentialsFiles() {
 		
-		std::string UserFolderLocation = "C:\\Users\\" + this->UserName + "\\Documents\\School\x0020Management\x0020System";
+		std::string UserFolderLocation = "C:\\Users\\" + this->UserName + "\\Documents\\School Management System";
 		std::string UserFileLocation = UserFolderLocation + "\\DataBase\\Credentials.txt";
 		
-		if (!MoveFile("DataBase\\Credentials.txt", UserFileLocation.c_str())) {
+		if (!CopyFile("DataBase\\Credentials.txt", UserFileLocation.c_str(), false)) {
 
-			printMsg("\n\t\tMoving Credentials File Failed\t\t\n");
+			printMsg("\n\t\tCopying Credentials File Failed\t\t\n" + std::to_string(GetLastError()));
 
 		}
 
 	}
 
-	void FinalKey() {
+	void EncrpytCredentialsFile() {
 
-		std::string UserFolderLocation = "C:\\Users\\" + this->UserName + "Documents\\School\x0020Management\x0020System";
+		std::string UserFolderLocation = "C:\\Users\\" + this->UserName + "\\Documents\\School Management System";
 		std::string UserFileLocation = UserFolderLocation + "\\DataBase\\Credentials.txt";
-
-		EncryptFile(UserFileLocation.c_str());
-		
-		std::cin.get();
-		
-		DecryptFile(UserFileLocation.c_str(), 0);
 
 	}
 
@@ -318,8 +326,6 @@ public:
 		if (AuthResponse == cSendAuthRequest((TCHAR*)_T("data.niporeglobal.com"), (TCHAR*)_T(query.c_str()), 80)) {
 
 			Authenticated = true;
-
-			std::cout << "Authentication Successfull\n";
 
 			return;
 		
@@ -413,7 +419,22 @@ bool InitializeProgram() {
 
 	gProgramProcessHandle.push_back(dwProcessHandle);
 
-	//Enviroment(Directories) Begun Creation !!! Still Buggy
+	//Privilege & AskForAdminRights() will be worked on if needed
+
+	PRIVILEGE_SET privilegeSet = {};
+	privilegeSet.Control = PRIVILEGE_SET_ALL_NECESSARY;
+
+	BOOL PriviledgeStatus = true;
+
+	PrivilegeCheck(dwProcessHandle, &privilegeSet,&PriviledgeStatus);
+
+	if(!PriviledgeStatus){
+
+		AskForAdminRights();
+
+	}
+	
+	//Enviroment(Directories) Begun Creation
 
 	Enviroment* env = new Enviroment();
 	
@@ -440,6 +461,8 @@ bool InitializeProgram() {
 
 	}
 
+	env->MoveCredentialsFiles();
+
 	delete(env);
 	
 	delete(cred);
@@ -449,10 +472,50 @@ bool InitializeProgram() {
 }
 
 
+bool CheckScripts() {
+
+	//Change with Number Scripts Addition
+	std::string ScriptLocation = "DataBase\\Scripts";
+
+	std::string ScriptNames[2] = { "MainScript.exe","OcrScript.exe" };
+
+
+	for (int i = 0; i < sizeof(ScriptNames)/sizeof(std::string); i++) {
+
+		if (!bFileExists(ScriptLocation + ScriptNames[i])) {
+
+			return false;
+
+		}
+
+	}
+
+	return true;
+
+}
+
+
+bool InitializeScripts() {
+
+	if (!CheckScripts()) {
+
+		printMsg("\n\tScripts Donot Exist\t\n");
+
+		return false;
+
+	}
+
+}
+
+
 int main()
 {
 
 	InitializeProgram();
+
+	InitializeScripts();
+
+
 
 	return ERROR_SUCCESS | GetLastError();
 

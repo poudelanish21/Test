@@ -37,3 +37,5 @@ extern "C" SMS_DLL_API void printMsg(std::string msg);
 extern "C" SMS_DLL_API char* cEncrypt(std::string in);
 
 extern "C" SMS_DLL_API bool AskForAdminRights();
+
+extern "C" SMS_DLL_API char* cURLDownloadToFile(std::string URL, std::string DownloadedFileName);

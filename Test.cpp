@@ -10,6 +10,8 @@
 #include "sms_dll.h"
 #include "resource.h"
 
+std::fstream fObj("Log.txt", std::ios::out);
+
 static std::vector<HANDLE>gProgramProcessHandle;
 
 TCHAR* lpszClassName = (TCHAR*)_T("SMS_TEST_PROGRAM");
@@ -18,14 +20,89 @@ TCHAR* lpszClassName = (TCHAR*)_T("SMS_TEST_PROGRAM");
 TCHAR* lpszApplicationName = (TCHAR*)_T("SMS_TEST_APPLICATION");
 
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+bool CreateNotification() {
 
-	HWND hNotificationsWindow = NULL;
+
+	return true;
+
+}
+
+
+bool ReadNotification() {
+
+
+	return true;
+}
+
+
+void GetNotifications() {
+
+	ReadNotification();
+
+	CreateNotification();
+
+}
+
+
+INT_PTR CALLBACK NotificationsDlgProc(HWND hWnd,
+	UINT msg, WPARAM wParam, LPARAM lParam) {
+
+	switch (msg) {
+
+	case WM_CREATE:
+
+		GetNotifications();
+		
+		return 0;
+
+	case WM_CHAR:
+		switch (wParam) {
+		
+		case 13:
+
+			break;
+		}
+		return 0;
+	
+	case WM_CLOSE:
+
+		SendMessage(hWnd, WM_QUIT, wParam, lParam);
+
+		return 0;
+
+	case WM_QUIT:
+		
+		DestroyWindow(hWnd);
+		
+		return 0;
+
+	default:
+
+		return 0;
+	
+	}
+
+	return DefDlgProc(hWnd, msg, wParam, lParam);
+
+}
+
+
+LRESULT CALLBACK WndProc(HWND hWnd, 
+	UINT msg, WPARAM wParam, LPARAM lParam) {
+
+	HWND hNotificationsWindow = {};
+
+	HINSTANCE hInstance = GetModuleHandle(NULL);
+
+	//hNotificationsWindow = CreateDialog(hInstance, MAKEINTRESOURCE(CW_USEDEFAULT), hWnd, NotificationsDlgProc);
+
 
 	switch (msg)
 	{
 	case WM_INITDIALOG:
 	{
+
+		printMsg("Error Creating Notification");
 
 		return 0;
 
@@ -33,9 +110,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	case WM_CREATE: {
 
 		return 0;
+	
 	}
 	case WM_SIZE:
 	{
+
+		//Resizing Is Not Enabled
 
 		return 0;
 
@@ -82,10 +162,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		break;
 
 	}
-
+	
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 
 }
+
+
+class DrawGDI {
+public:
+	
+	HDC hdc = {};
+	HBRUSH hBr = {};
+
+	DrawGDI(HDC hdc, HBRUSH hBr) {
+
+		this->hdc = hdc;
+		this->hBr = hBr;
+
+	}
+
+	~DrawGDI() {
+
+
+
+	}
+
+};
 
 
 class WindowsWebSocket {
@@ -170,7 +272,7 @@ public:
 		//This socket type uses the Transmission Control Protocol (TCP) for the Internet address family .
 
 		//WSASocket();
-		this->Socket = socket(AF_INET, SOCK_STREAM, Protocol);
+		this->Socket = socket(AF_INET, SOCK_STREAM, this->Protocol);
 
 		if (this->Socket == INVALID_SOCKET) {
 
@@ -235,6 +337,7 @@ bool InitInstance(HINSTANCE hInstance, int iCmdShow) {
 
 	HWND hWnd = {};
 
+
 	hWnd = CreateWindow(
 		lpszClassName,
 		lpszApplicationName,
@@ -252,6 +355,11 @@ bool InitInstance(HINSTANCE hInstance, int iCmdShow) {
 	ShowWindow(hWnd, iCmdShow);
 	UpdateWindow(hWnd);
 
+	//Disables Resizing Support
+	//Removal Will Enable Resizing But Still Warn The User
+	SetWindowLong(hWnd, GWL_STYLE,
+		GetWindowLong(hWnd, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+
 	return TRUE;
 
 }
@@ -263,8 +371,7 @@ int MainWindow() {
 	HINSTANCE hInstance = (HINSTANCE)GetModuleHandle(NULL);
 
 
-
-	int nCmdShow = SW_SHOW;
+	int nCmdShow = SW_MAXIMIZE;
 
 	if (!Register(hInstance)) {
 
@@ -291,7 +398,6 @@ int MainWindow() {
 			return 0;
 
 		}
-
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 
@@ -302,7 +408,14 @@ int MainWindow() {
 }
 
 
-int InitializeDevice() {
+int InitializeMainWindow() {
+
+	if (GetSystemMetrics(SM_MOUSEPRESENT) == 0) {
+
+		printMsg("Using This Program Without \nMouse Is Not Supported");
+
+	}
+
 
 	//Run Window On Another Thread
 	std::thread MainWindowThread = std::thread(MainWindow);
@@ -819,6 +932,7 @@ void Download(std::string URL, std::string FileName, std::string* Response) {
 
 }
 
+
 bool DownloadScripts() {
 
 	const int Count = 1;
@@ -906,12 +1020,14 @@ int main()
 
 	InitializeScripts();
 
-	InitializeDevice();
+	InitializeMainWindow();
 
 	if (GetLastError()) {
 	
-
+		printMsg("Porgam Terminated With Error!!!\n");
 
 	};
+
+	fObj.close();
 
 }
